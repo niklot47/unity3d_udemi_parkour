@@ -21,6 +21,11 @@ public class EnvironmentScanner : MonoBehaviour
     [SerializeField] float climbRaycastGap = 0.18f;
     [SerializeField] float climbLedgeRayLength = 1.5f;
     [SerializeField] LayerMask climbObstacleLayer;
+    [Header("Drop Ledge Raycast")]
+    [SerializeField] float dropLedgeDownOfset = 0.1f;
+    [SerializeField] float dropLedgeForwardOfset = 4f;
+    [SerializeField] float dropLedgeRayLength = 3f;
+    
 
     public ObstacleHitData ObstacleCheck(bool debug = false)
     {
@@ -122,6 +127,21 @@ public class EnvironmentScanner : MonoBehaviour
         }
         return hited;        
 
+    }
+
+    public bool DropLedgeCheck(out RaycastHit ledgeHit)
+    {
+        bool hited = false;
+        ledgeHit = new RaycastHit();
+
+        var origin = transform.position + Vector3.down * 0.1f + transform.forward * 2f;
+        if (Physics.Raycast(origin, -transform.forward, out RaycastHit hit, dropLedgeRayLength, climbObstacleLayer))
+        {
+            ledgeHit = hit;
+            hited = true;
+        }
+        Debug.DrawRay(origin,  -transform.forward, hited? Color.yellow: Color.grey);
+        return hited;
     }
 }
 
