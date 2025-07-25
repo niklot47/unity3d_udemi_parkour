@@ -118,8 +118,8 @@ public class PlayerController : MonoBehaviour
     }
 
     public IEnumerator DoAction(string animName,
-                        MatchTargetParams matchTargetParams,
-                        Quaternion targetRotation,
+                        MatchTargetParams matchTargetParams=null,
+                        Quaternion targetRotation=new Quaternion(),
                         bool rotate = false,
                         float postActionDelay = 0f,
                         bool mirror = false)
@@ -127,7 +127,7 @@ public class PlayerController : MonoBehaviour
         InAction = true;
 
         animator.SetBool("mirrorAction", mirror);
-        animator.CrossFade(animName, 0.2f);
+        animator.CrossFadeInFixedTime(animName, 0.2f);
         yield return null;
 
 
@@ -136,11 +136,14 @@ public class PlayerController : MonoBehaviour
             Debug.LogError("Animation is wrong! " + animName);
 
         float timer = 0f;
+        float rotateStart = (matchTargetParams != null) ? matchTargetParams.startTime : 0f;
+
         while (timer <= animationState.length)
         {
             timer += Time.deltaTime;
+            float normalizedTime = timer / animationState.length;
 
-            if (rotate)
+            if (rotate && normalizedTime > rotateStart)
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
             if (matchTargetParams != null)
@@ -181,10 +184,20 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    public void EnableCharacterController(bool enabled)
+    { 
+        characterController.enabled = enabled;
+    }
+
     void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(0, 1, 0, 0.5f);
         Gizmos.DrawSphere(transform.TransformPoint(groundCheckOffset), groundCheckRadius);
+    }
+
+    public void ResetTaergetRotation()
+    { 
+        targetRotation = transform.rotation;
     }
 
     public float RotationSpeed => rotationSpeed;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class ClimbControllers : MonoBehaviour
 {
@@ -28,14 +29,31 @@ public class ClimbControllers : MonoBehaviour
                     StartCoroutine(JumpToLedge("IdleToHang", ledgeHit.transform, 0.4f, 0.533f));
                 }
             }
+
+            if (Input.GetButton("Drop") && !playerController.InAction)
+            { 
+                
+            }
         }
         else
         {
+            if (Input.GetButton("Drop") && !playerController.InAction)
+            {
+                StartCoroutine(JumpFromWall());
+                return;
+            }
+
             float horizontal = Mathf.Round(Input.GetAxis("Horizontal"));
             float vertical = Mathf.Round(Input.GetAxis("Vertical"));
             var input = new Vector2(horizontal, vertical);
 
             if (playerController.InAction || input == Vector2.zero) return;
+
+            if (currentPoint.MountPoint && input.y == 1 && Input.GetButton("Jump"))
+            {
+                StartCoroutine(MountFromHand());
+                return;
+            }
 
             var neighbor = currentPoint.GetNeighbor(input);
 
@@ -44,27 +62,42 @@ public class ClimbControllers : MonoBehaviour
             if (neighbor.connectionType == ConnectionType.Jump && Input.GetButton("Jump"))
             {
                 currentPoint = neighbor.point;
-                
+
                 if (neighbor.direction.y == 1)
-                    StartCoroutine(JumpToLedge("HangHopUp", currentPoint.transform, 0.44f, 0.6f));
+                    StartCoroutine(JumpToLedge("HangHopUp", currentPoint.transform, 0.44f, 0.6f, handOffset: new Vector3(0.25f, 0.1f, 0.15f)));
 
                 if (neighbor.direction.y == -1)
-                    StartCoroutine(JumpToLedge("HangHopDown", currentPoint.transform, 0.31f, 0.65f));
+                    StartCoroutine(JumpToLedge("HangHopDown", currentPoint.transform, 0.46f, 0.63f, AvatarTarget.LeftHand, handOffset: new Vector3(0.29f, -0.2f, 0.05f)));
 
                 if (neighbor.direction.x == 1)
-                    StartCoroutine(JumpToLedge("HangHopRight", currentPoint.transform, 0.24f, 0.36f));
-                    
+                    StartCoroutine(JumpToLedge("HangHopRight", currentPoint.transform, 0.24f, 0.36f, handOffset: new Vector3(0.25f, 0.12f, 0.15f)));
+
                 if (neighbor.direction.x == -1)
                     StartCoroutine(JumpToLedge("HangHopLeft", currentPoint.transform, 0.32f, 0.45f));
+            }
+            else if (neighbor.connectionType == ConnectionType.Move)
+            {
+                currentPoint = neighbor.point;
+
+                if (neighbor.direction.x == 1)
+                    StartCoroutine(JumpToLedge("ShimmyRight", currentPoint.transform, 0f, 0.38f, handOffset: new Vector3(0.25f, 0.05f, 0.1f)));
+
+                if (neighbor.direction.x == -1)
+                    StartCoroutine(JumpToLedge("ShimmyLeft", currentPoint.transform, 0f, 0.38f, AvatarTarget.LeftHand, handOffset: new Vector3(0.25f, 0.05f, 0.1f)));
             }
         }
     }
 
-    IEnumerator JumpToLedge(string animName, Transform ledge, float matchStartTime, float matchTargetTime, AvatarTarget avatarTarget = AvatarTarget.RightHand)
+    IEnumerator JumpToLedge(string animName,
+                            Transform ledge,
+                            float matchStartTime,
+                            float matchTargetTime,
+                            AvatarTarget avatarTarget = AvatarTarget.RightHand,
+                            Vector3? handOffset = null)
     {
         var matchParam = new MatchTargetParams()
         {
-            pos = GetHandPos(ledge),
+            pos = GetHandPos(ledge, avatarTarget, handOffset),
             bodyPart = avatarTarget,
             posWeight = Vector3.one,
             startTime = matchStartTime,
@@ -78,8 +111,32 @@ public class ClimbControllers : MonoBehaviour
         playerController.IsHanging = true;
     }
 
-    Vector3 GetHandPos(Transform ledge)
+    Vector3 GetHandPos(Transform ledge, AvatarTarget hand, Vector3? handOffset = null)
     {
-        return ledge.position + ledge.forward * 0.1f + Vector3.up * 0.1f - ledge.right * 0.25f;
+        Vector3 offsetValue = (handOffset != null) ? handOffset.Value : new Vector3(0.25f, 0.1f, 0.1f);
+
+        var hDit = hand == AvatarTarget.RightHand ? ledge.right : -ledge.right;
+        return ledge.position + ledge.forward * offsetValue.z + Vector3.up * offsetValue.y - hDit * offsetValue.x;
+    }
+
+    IEnumerator JumpFromWall()
+    {
+        playerController.IsHanging = false;
+        yield return playerController.DoAction("JumpFromWall");
+
+        playerController.ResetTaergetRotation();
+        playerController.SetControl(true);
+    }
+
+    IEnumerator MountFromHand()
+    { 
+        playerController.IsHanging = false;
+        yield return playerController.DoAction("HangToCrouch");
+        playerController.EnableCharacterController(true);
+
+        yield return new WaitForSeconds(0.5f);
+        
+        playerController.ResetTaergetRotation();
+        playerController.SetControl(true);
     }
 }

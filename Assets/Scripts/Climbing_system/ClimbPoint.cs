@@ -7,6 +7,7 @@ using UnityEngine;
 
 public class ClimbPoint : MonoBehaviour
 {
+    [SerializeField] bool mountPoint;
     [SerializeField] List<Neighbor> neighbors;
 
     public void Awake()
@@ -49,8 +50,10 @@ public class ClimbPoint : MonoBehaviour
         if (neighbor == null && direction.x != 0)
             neighbor = neighbors.FirstOrDefault(n => n.direction.x == direction.x);
 
-        return neighbor;  
+        return neighbor;
     }
+
+    public bool MountPoint => mountPoint;
 }
 
 
